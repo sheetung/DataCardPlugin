@@ -11,7 +11,7 @@ metadata:
   label:
     en_US: DataCardPlugin
     zh_Hans: DataCardPlugin
-  icon: assets/icon.svg
+  icon: assets/icon.png
 spec:
   config:
     - name: llkshop_id
