@@ -2,6 +2,9 @@
 
 流量卡查询-LangBot V4.0插件
 
+<p align="center"> <img src="./assets/1.png" alt="GitHub 解析示例" width="400"> <img src="./assets/2.png" alt="Gitee 解析示例" width="400"> </p>
+
+
 ## 使用方法
 
 命令详情：

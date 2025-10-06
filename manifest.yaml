@@ -4,7 +4,7 @@ metadata:
   author: sheetung
   name: DataCardPlugin
   repository: 'https://github.com/sheetung/DataCardPlugin'
-  version: 0.1.0
+  version: 0.1.1
   description:
     en_US: 流量卡查询
     zh_Hans: 流量卡查询
