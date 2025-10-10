@@ -122,10 +122,11 @@ class DefaultEventListener(EventListener):
                 await event_context.reply(
                     platform_message.MessageChain(message_chain)
                 )
-            else:
+            elif message_text == '流量卡':
                 # 默认回复
                 await event_context.reply(
                     platform_message.MessageChain([
-                        platform_message.Plain(text=f"Hello from LangBot Plugin!\n您可以使用'流量卡<关键词>'命令查询流量卡信息，例如：流量卡19元 或 流量卡广东"),
+                        platform_message.Plain(text=f"您可以使用'流量卡<关键词>'命令查询流量卡信息，例如：流量卡19元 或 流量卡广东"),
                     ])
                 )
+                return
