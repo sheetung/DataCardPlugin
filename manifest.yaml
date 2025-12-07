@@ -4,7 +4,7 @@ metadata:
   author: sheetung
   name: DataCardPlugin
   repository: 'https://github.com/sheetung/DataCardPlugin'
-  version: 0.1.2
+  version: 0.2.2
   description:
     en_US: 流量卡查询
     zh_Hans: 流量卡查询
@@ -21,6 +21,20 @@ spec:
         zh_Hans: 'LLKShop ID'
       required: true
       default: '3abcd2e80b9b4694'
+    - name: use_forward
+      type: boolean
+      label:
+        en_US: 'Enable Forwarding Merge'
+        zh_Hans: '是否启用合并转发（仅适配OneBot）'
+      required: false
+      default: true
+    - name: onebot_api_url
+      type: string
+      label:
+        en_US: 'OneBot API URL'
+        zh_Hans: 'OneBot API 地址'
+      required: false
+      default: 'http://127.0.0.1:3000'
   components:
     EventListener:
       fromDirs:

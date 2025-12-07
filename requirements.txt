@@ -1,3 +1,4 @@
 langbot-plugin
 beautifulsoup4
 requests
+aiohttp

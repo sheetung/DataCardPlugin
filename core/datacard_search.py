@@ -135,7 +135,7 @@ def search_data_cards(keyword="19元", llkshop_id='3abcd2e80b9b4694'):
             "success": False,
             "message": f"未找到包含 '{keyword}' 的产品",
             "shop_link": f"https://172.lot-ml.com/ProductEn/Index/{llkshop_id}",
-            "command_info": "流量卡< $元 > 例如：流量卡9元\n流量卡< 省 > 例如：流量卡广东",
+            "command_info": "流量卡< 元 > 例如：流量卡9元\n流量卡< 省 > 例如：流量卡广东",
             "results": []
         }
     else:

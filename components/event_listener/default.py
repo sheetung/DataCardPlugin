@@ -11,6 +11,10 @@ from langbot_plugin.api.entities import events, context
 from langbot_plugin.api.entities.builtin.platform import message as platform_message
 from langbot_plugin.api.entities.builtin.provider import message as provider_message
 
+# 导入合并转发功能
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'utils'))
+from forward_message import ForwardMessageSender
+
 
 class DefaultEventListener(EventListener):
 
@@ -18,11 +22,20 @@ class DefaultEventListener(EventListener):
         super().__init__()
         # 获取core目录路径
         self.core_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'core')
+        # 初始化合并转发发送器
+        self.forward_sender = ForwardMessageSender(http_url="http://127.0.0.1:3000")
     
     async def initialize(self):
         await super().initialize()
 
         self.llkshop_id = self.plugin.get_config().get("llkshop_id", '3abcd2e80b9b4694')
+        # 从配置读取是否启用合并转发（默认启用）
+        self.use_forward = self.plugin.get_config().get("use_forward", True)
+        # 合并转发阈值：结果超过此数量时使用合并转发（默认3条）
+        self.forward_threshold = self.plugin.get_config().get("forward_threshold", 1)
+        # OneBot API 地址
+        onebot_api_url = self.plugin.get_config().get("onebot_api_url", "http://127.0.0.1:3000")
+        self.forward_sender.update_config(http_url=onebot_api_url)
 
         @self.handler(events.GroupMessageReceived)
         async def handler(event_context: context.EventContext):
@@ -56,6 +69,9 @@ class DefaultEventListener(EventListener):
                     )
                     return
                 
+                # 判断是否使用合并转发
+                use_forward = self.use_forward and result.get('success', False) and len(result.get('results', [])) > self.forward_threshold
+
                 # 构建回复消息
                 reply_content = []
                 if result['success']:
@@ -63,9 +79,9 @@ class DefaultEventListener(EventListener):
                     reply_content.append(f"更多流量卡请到页面店铺查询: {result['shop_link']}")
                     reply_content.append(f"命令详情：\n{result['command_info']}")
                     reply_content.append("\n---\n")
-                    
-                    # 添加产品详情（限制显示前3个结果，避免消息过长）
-                    display_count = min(3, len(result['results']))
+
+                    # 如果使用合并转发，显示所有结果；否则限制显示前3个
+                    display_count = len(result['results']) if use_forward else min(3, len(result['results']))
                     for i in range(display_count):
                         product = result['results'][i]
                         reply_content.append(product['md图片'])
@@ -76,8 +92,8 @@ class DefaultEventListener(EventListener):
                         reply_content.append(f"适用年龄: {product['适用年龄']}")
                         reply_content.append(f"详情链接: {product['详情链接']}")
                         reply_content.append("\n---\n")
-                    
-                    if display_count < len(result['results']):
+
+                    if not use_forward and display_count < len(result['results']):
                         reply_content.append(f"... 还有 {len(result['results']) - display_count} 个结果未显示，请尝试更精确的关键词")
                 else:
                     reply_content.append(result['message'])
@@ -85,43 +101,71 @@ class DefaultEventListener(EventListener):
                     reply_content.append(f"命令详情：\n{result['command_info']}")
                     reply_content.append("\n---\n")
                 
-                # 构建消息链
-                message_chain = []
-                response_text = '\n'.join(reply_content)
-                
-                # 检查结果是否包含markdown格式的图片
-                # 匹配 ![alt text](image_url) 格式
-                last_end = 0
-                has_image = False
-                
-                # 使用compile优化正则表达式性能
-                markdown_image_pattern = re.compile(r'!\[(.*?)\]\((http[s]?:\/\/[^)]+)\)')
-                
-                # 处理所有匹配的图片
-                for match in markdown_image_pattern.finditer(response_text):
-                    has_image = True
-                    start, end = match.span()
-                    
-                    # 如果图片前面有文本，添加为Plain消息
-                    if start > last_end:
-                        message_chain.append(platform_message.Plain(text=response_text[last_end:start]))
-                    
-                    # 提取图片URL并创建Image消息
-                    image_url = match.group(2)
-                    message_chain.append(platform_message.Image(url=image_url))
-                    last_end = end
-                
-                # 处理剩余文本
-                if last_end + 1 < len(response_text) and has_image:
-                    message_chain.append(platform_message.Plain(text=response_text[last_end:]))
-                elif not has_image:
-                    # 普通文本消息
-                    message_chain.append(platform_message.Plain(text=response_text))
-                
                 # 发送消息
-                await event_context.reply(
-                    platform_message.MessageChain(message_chain)
-                )
+                response_text = '\n'.join(reply_content)
+
+                if use_forward:
+                    # 使用合并转发
+                    try:
+                        # 转换为合并转发格式
+                        messages = self.forward_sender.convert_to_forward(response_text)
+
+                        # 发送合并转发消息
+                        forward_result = await self.forward_sender.send_forward(
+                            group_id=event_context.event.launcher_id,
+                            messages=messages,
+                            prompt=f"流量卡查询 - {keyword}",
+                            summary=f"找到 {result['total_count']} 个产品",
+                            nickname="流量卡助手",
+                            mode="multi"
+                        )
+
+                        if not forward_result['success']:
+                            # 合并转发失败，回退到普通消息
+                            print(f"合并转发失败: {forward_result.get('error')}，使用普通消息发送")
+                            use_forward = False
+                    except Exception as e:
+                        # 出错时回退到普通消息
+                        print(f"合并转发出错: {e}，使用普通消息发送")
+                        use_forward = False
+
+                if not use_forward:
+                    # 使用普通消息（原有逻辑）
+                    message_chain = []
+
+                    # 检查结果是否包含markdown格式的图片
+                    # 匹配 ![alt text](image_url) 格式
+                    last_end = 0
+                    has_image = False
+
+                    # 使用compile优化正则表达式性能
+                    markdown_image_pattern = re.compile(r'!\[(.*?)\]\((http[s]?:\/\/[^)]+)\)')
+
+                    # 处理所有匹配的图片
+                    for match in markdown_image_pattern.finditer(response_text):
+                        has_image = True
+                        start, end = match.span()
+
+                        # 如果图片前面有文本，添加为Plain消息
+                        if start > last_end:
+                            message_chain.append(platform_message.Plain(text=response_text[last_end:start]))
+
+                        # 提取图片URL并创建Image消息
+                        image_url = match.group(2)
+                        message_chain.append(platform_message.Image(url=image_url))
+                        last_end = end
+
+                    # 处理剩余文本
+                    if last_end + 1 < len(response_text) and has_image:
+                        message_chain.append(platform_message.Plain(text=response_text[last_end:]))
+                    elif not has_image:
+                        # 普通文本消息
+                        message_chain.append(platform_message.Plain(text=response_text))
+
+                    # 发送消息
+                    await event_context.reply(
+                        platform_message.MessageChain(message_chain)
+                    )
             elif message_text == '流量卡':
                 # 默认回复
                 await event_context.reply(
