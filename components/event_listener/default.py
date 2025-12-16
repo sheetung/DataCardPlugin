@@ -56,9 +56,9 @@ class DefaultEventListener(EventListener):
                     spec = importlib.util.spec_from_file_location('datacard_search', module_path)
                     datacard_module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(datacard_module)
-                    
-                    # 调用流量卡搜索函数，传递配置的llkshop_id
-                    result = datacard_module.search_data_cards(keyword, self.llkshop_id)
+
+                    # 调用流量卡搜索函数，传递配置的llkshop_id（异步调用）
+                    result = await datacard_module.search_data_cards(keyword, self.llkshop_id)
                 except Exception as e:
                     print(f"加载模块失败: {e}")
                     reply_content = ["加载流量卡搜索模块失败，请检查插件配置。"]
