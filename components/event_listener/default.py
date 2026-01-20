@@ -35,7 +35,10 @@ class DefaultEventListener(EventListener):
         self.forward_threshold = self.plugin.get_config().get("forward_threshold", 1)
         # OneBot API 地址
         onebot_api_url = self.plugin.get_config().get("onebot_api_url", "http://127.0.0.1:3000")
-        self.forward_sender.update_config(http_url=onebot_api_url)
+        # OneBot API 访问令牌
+        onebot_access_token = self.plugin.get_config().get("onebot_access_token", "")
+
+        self.forward_sender.update_config(http_url=onebot_api_url, access_token=onebot_access_token)
 
         @self.handler(events.GroupMessageReceived)
         async def handler(event_context: context.EventContext):

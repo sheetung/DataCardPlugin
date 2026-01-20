@@ -4,7 +4,7 @@ metadata:
   author: sheetung
   name: DataCardPlugin
   repository: 'https://github.com/sheetung/DataCardPlugin'
-  version: 0.3.2
+  version: 0.4.2
   description:
     en_US: 流量卡查询
     zh_Hans: 流量卡查询
@@ -35,6 +35,13 @@ spec:
         zh_Hans: 'OneBot API 地址'
       required: false
       default: 'http://127.0.0.1:3000'
+    - name: onebot_access_token
+      type: string
+      label:
+        en_US: 'OneBot API Access Token'
+        zh_Hans: 'OneBot API 访问令牌'
+      required: true
+      default: ''
   components:
     EventListener:
       fromDirs:
